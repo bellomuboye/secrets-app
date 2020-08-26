@@ -27,7 +27,8 @@ mongoose.set("useCreateIndex", true);
 
 const usersSchema = new mongoose.Schema({
 	email: String,
-	password: String
+	password: String,
+	secrets: String
 });
 
 usersSchema.plugin(passportLocalMongoose);
@@ -52,11 +53,44 @@ app.get("/register", function (req, res) {
 });
 
 app.get("/secrets", function (req, res) {
+	User.find({"secrets": {$ne: null}}, function (err, foundUsers) {
+		if (err) {
+			console.log(err);
+		} else {
+			if (foundUsers) {
+				res.render("secrets", {
+					usersWithSecrets: foundUsers
+				});
+			}
+		}
+	});
+});
+
+app.get('/submit', function (req, res) {
 	if (req.isAuthenticated()) {
-		res.render("secrets");
+		res.render("submit");
 	} else {
 		res.redirect("/login");
 	}
+});
+
+app.post("/submit", function (req, res) {
+	const submittedSecret = req.body.secret;
+
+	User.findById(req.user.id, function (err, foundUser) {
+		if (err) {
+			console.log(err);
+		} else {
+			if (foundUser) {
+				console.log(submittedSecret);
+				console.log(foundUser);
+				foundUser.secrets = submittedSecret;
+				foundUser.save(function () {
+					res.redirect("/secrets");
+				});
+			}
+		}
+	});
 });
 
 app.get("/logout", function (req, res) {
@@ -96,8 +130,6 @@ app.post("/login", function (req, res) {
 	});
 	
 });
-
-
 
 
 app.listen(3000, function() {
